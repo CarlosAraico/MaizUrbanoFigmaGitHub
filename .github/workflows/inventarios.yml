@@ -75,8 +75,8 @@ jobs:
     needs: [inventarios]
     env:
       IMAGE: ghcr.io/carlosaraico/maizurbanofigmagithub-backend
-      DOCKERFILE_PATH: ./Dockerfile.backend
-      BUILD_CONTEXT: .
+      DOCKERFILE_PATH: ./Dockerfile.backend   # cambia a ./backend/Dockerfile si prefieres
+      BUILD_CONTEXT: .                        # cambia a ./backend si prefieres
     if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
 
     steps:
@@ -87,6 +87,7 @@ jobs:
         id: meta
         shell: bash
         run: |
+          set -euo pipefail
           SHORT="$(git rev-parse --short HEAD)"
           BRANCH="${GITHUB_REF_NAME:-}"
           SAN_BRANCH="$(echo "${BRANCH}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]/-/g')"
@@ -99,29 +100,34 @@ jobs:
           SOURCE="https://github.com/${GITHUB_REPOSITORY}"
           VERSION="$(node -e "try{console.log(require('./backend/package.json').version||'0.0.0')}catch{console.log('0.0.0')}" )"
 
-          TAGS="${IMAGE}:sha-${SHORT}
-${IMAGE}:date-${DATE_TAG}"
+          TAGS_ARR=()
+          TAGS_ARR+=("${IMAGE}:sha-${SHORT}")
+          TAGS_ARR+=("${IMAGE}:date-${DATE_TAG}")
           if [ -n "${SAN_BRANCH}" ]; then
-            TAGS="${TAGS}
-${IMAGE}:branch-${SAN_BRANCH}"
+            TAGS_ARR+=("${IMAGE}:branch-${SAN_BRANCH}")
           fi
           if [ -n "${PR}" ]; then
-            TAGS="${TAGS}
-${IMAGE}:pr-${PR}
-${IMAGE}:pr-${PR}-sha-${SHORT}"
+            TAGS_ARR+=("${IMAGE}:pr-${PR}")
+            TAGS_ARR+=("${IMAGE}:pr-${PR}-sha-${SHORT}")
           fi
           if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${BRANCH}" = "main" ]; then
-            TAGS="${TAGS}
-${IMAGE}:latest"
+            TAGS_ARR+=("${IMAGE}:latest")
           fi
 
-          echo "short=${SHORT}"        >> "$GITHUB_OUTPUT"
-          echo "created=${CREATED}"    >> "$GITHUB_OUTPUT"
-          echo "source=${SOURCE}"      >> "$GITHUB_OUTPUT"
-          echo "version=${VERSION}"    >> "$GITHUB_OUTPUT"
-          echo "tags<<EOF"             >> "$GITHUB_OUTPUT"
-          echo "${TAGS}"               >> "$GITHUB_OUTPUT"
-          echo "EOF"                   >> "$GITHUB_OUTPUT"
+          {
+            echo "short=${SHORT}"
+            echo "created=${CREATED}"
+            echo "source=${SOURCE}"
+            echo "version=${VERSION}"
+            echo "tags<<EOF"
+            printf '%s\n' "${TAGS_ARR[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Mostrar tags calculados
+        run: |
+          echo "TAGS:"
+          echo "${{ steps.meta.outputs.tags }}"
 
       - name: Setup QEMU (multi-arch)
         uses: docker/setup-qemu-action@v3
@@ -148,7 +154,7 @@ ${IMAGE}:latest"
           labels: |
             org.opencontainers.image.title=maizurbanofigmagithub-backend
             org.opencontainers.image.description=Maiz Urbano backend API
-            org.opencontainers.image.source=${{ steps.meta.outputs.source }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ steps.meta.outputs.created }}
             org.opencontainers.image.version=${{ steps.meta.outputs.version }}
