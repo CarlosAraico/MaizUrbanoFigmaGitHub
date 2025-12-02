@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MU Inventory</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0a0f14;
+        --panel: #0f1720;
+        --muted: #7c8997;
+        --accent: #32d17d;
+      }
+      body {
+        margin: 0;
+        font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: #e5edf5;
+      }
+      .shell {
+        padding: 16px;
+        display: grid;
+        gap: 12px;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid #1c2530;
+        border-radius: 12px;
+        padding: 14px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      input,
+      button {
+        border-radius: 8px;
+        border: 1px solid #1f2a36;
+        padding: 10px 12px;
+        font-size: 13px;
+        background: #0c131a;
+        color: #e5edf5;
+      }
+      input:focus {
+        outline: 2px solid var(--accent);
+      }
+      button {
+        cursor: pointer;
+        background: var(--accent);
+        color: #0b1710;
+        border: none;
+        font-weight: 600;
+      }
+      button.secondary {
+        background: #1f2a36;
+        color: #d2e4f5;
+        border: 1px solid #2c3846;
+      }
+      .label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .status {
+        font-size: 12px;
+        color: #d2e4f5;
+      }
+      pre {
+        background: #0c131a;
+        border: 1px solid #1c2530;
+        border-radius: 8px;
+        padding: 10px;
+        font-size: 12px;
+        color: #cbd5e1;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div>
+        <div class="label">Backend</div>
+        <div id="base" class="status"></div>
+      </div>
+
+      <div class="panel">
+        <div class="label">Consultar inventario</div>
+        <div class="row" style="margin-top: 8px">
+          <input id="item-id" value="corn-blue" placeholder="id de item" />
+          <button id="btn-query">Consultar</button>
+        </div>
+        <div id="result" class="status" style="margin-top: 8px">
+          Esperando consulta...
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="label">Enviar webhook (idempotente)</div>
+        <div class="row" style="margin-top: 8px">
+          <input id="stock-value" type="number" value="120" />
+          <button id="btn-webhook" class="secondary">Actualizar stock</button>
+        </div>
+        <div class="status" id="webhook-status" style="margin-top: 8px">
+          Requiere PLUGIN_SECRET para header X-Webhook-Secret
+        </div>
+      </div>
+
+      <pre id="sample"></pre>
+    </div>
+
+    <script type="module">
+      const base =
+        import.meta.env.PLUGIN_BASE ||
+        import.meta.env.VITE_PLUGIN_BASE ||
+        "http://127.0.0.1:4000";
+      const secret =
+        import.meta.env.PLUGIN_SECRET || import.meta.env.VITE_PLUGIN_SECRET || "";
+
+      const baseEl = document.getElementById("base");
+      const resultEl = document.getElementById("result");
+      const webhookEl = document.getElementById("webhook-status");
+      const sampleEl = document.getElementById("sample");
+
+      baseEl.textContent = base;
+      sampleEl.textContent = `curl -X POST ${base}/api/webhooks/inventory \\
+  -H "Content-Type: application/json" \\
+  -H "X-Webhook-Secret: ${secret || "<secret>"}" \\
+  -d '{
+    "eventId": "evt-figma-demo",
+    "items": [{"id": "corn-blue", "quantity": 125}]
+  }'`;
+
+      async function queryInventory() {
+        const id = document.getElementById("item-id").value.trim();
+        if (!id) return;
+        resultEl.textContent = "Consultando...";
+        try {
+          const res = await fetch(`${base}/api/inventory/${id}`);
+          if (!res.ok) throw new Error("Item no encontrado");
+          const { item } = await res.json();
+          resultEl.textContent = `${item.name} · Stock: ${item.stock}`;
+          parent?.postMessage?.(
+            { pluginMessage: { type: "notify", message: "Inventario listo" } },
+            "*"
+          );
+        } catch (err) {
+          resultEl.textContent = err.message || "Error al consultar";
+        }
+      }
+
+      async function sendWebhook() {
+        const id = document.getElementById("item-id").value.trim();
+        const stock = Number(
+          (document.getElementById("stock-value").value || "").trim()
+        );
+        if (!id || Number.isNaN(stock)) return;
+        webhookEl.textContent = "Enviando evento...";
+
+        try {
+          const res = await fetch(`${base}/api/webhooks/inventory`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Webhook-Secret": secret,
+            },
+            body: JSON.stringify({
+              eventId: `figma-${Date.now()}`,
+              items: [{ id, quantity: stock }],
+              source: "figma-plugin",
+            }),
+          });
+
+          const body = await res.json();
+          if (!res.ok) throw new Error(body.error || "Webhook fallo");
+          webhookEl.textContent = `OK (${body.items?.length || 0} items)`;
+          parent?.postMessage?.(
+            { pluginMessage: { type: "notify", message: "Webhook procesado" } },
+            "*"
+          );
+          await queryInventory();
+        } catch (err) {
+          webhookEl.textContent = err.message || "Error en webhook";
+        }
+      }
+
+      document
+        .getElementById("btn-query")
+        .addEventListener("click", queryInventory);
+      document
+        .getElementById("btn-webhook")
+        .addEventListener("click", sendWebhook);
+    </script>
+  </body>
+</html>

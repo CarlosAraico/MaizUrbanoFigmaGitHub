@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "build": "echo \"backend ready\"",
     "seed": "node ./scripts/seed.js",
     "test": "node -e \"console.log('No automated tests yet')\""
   },

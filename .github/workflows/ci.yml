@@ -20,18 +20,14 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install frontend dependencies
+      - name: Install workspace dependencies
         run: npm ci
 
-      - name: Build frontend
+      - name: Build workspace packages
         run: npm run build
-
-      - name: Install backend dependencies
-        if: ${{ hashFiles('backend/package.json') != '' }}
-        run: npm ci --prefix backend
 
       - name: Seed backend database
         if: ${{ hashFiles('backend/package.json') != '' }}
         env:
           DB_PATH: /tmp/mu-backend-seed.db
-        run: node ./backend/scripts/seed.js
+        run: npm --workspace backend run seed

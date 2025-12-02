@@ -1,148 +1,149 @@
 const path = require("path");
-require("dotenv").config({ path: path.join(__dirname, ".env") });
 const express = require("express");
 const cors = require("cors");
-const { openDatabase, runMigrations } = require("./db");
+const dotenv = require("dotenv");
+const { openDatabase } = require("./db");
 
-const PORT = Number(process.env.PORT) || 4000;
+dotenv.config({ path: path.join(__dirname, ".env") });
+
+const PORT = Number(process.env.PORT || 4000);
 const DB_PATH =
   process.env.DB_PATH || path.join(__dirname, "data", "inventory.db");
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
+if (!WEBHOOK_SECRET) {
+  console.warn(
+    "[warn] WEBHOOK_SECRET is not set. Configure backend/.env before production."
+  );
+}
+
 const db = openDatabase(DB_PATH);
-runMigrations(db);
-
 const app = express();
+
 app.use(cors());
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json());
 
-const selectEvent = db.prepare(
-  "SELECT id FROM inventory_events WHERE event_id = ?"
+const getItem = db.prepare(
+  "SELECT id, name, stock, updated_at as updatedAt FROM inventory WHERE id = ?"
 );
-
-const insertEvent = db.prepare(`
-  INSERT INTO inventory_events (event_id, payload, received_from)
-  VALUES (?, ?, ?)
-`);
-
-const ensureMaterial = db.prepare(`
-  INSERT INTO materials (sku, name, stock, updated_at)
-  VALUES (?, ?, 0, CURRENT_TIMESTAMP)
-  ON CONFLICT(sku) DO NOTHING
-`);
-
-const upsertMaterial = db.prepare(`
-  INSERT INTO materials (sku, name, stock, updated_at)
-  VALUES (@sku, @name, @stock, CURRENT_TIMESTAMP)
-  ON CONFLICT(sku) DO UPDATE SET
+const upsertItem = db.prepare(`
+  INSERT INTO inventory (id, name, stock, updated_at)
+  VALUES (@id, @name, @stock, CURRENT_TIMESTAMP)
+  ON CONFLICT(id) DO UPDATE SET
     name = excluded.name,
     stock = excluded.stock,
     updated_at = CURRENT_TIMESTAMP
 `);
-
-const adjustMaterial = db.prepare(`
-  UPDATE materials
-  SET stock = stock + @delta,
-      name = COALESCE(@name, name),
+const updateDelta = db.prepare(`
+  UPDATE inventory
+  SET name = COALESCE(@name, name),
+      stock = MAX(0, stock + @delta),
       updated_at = CURRENT_TIMESTAMP
-  WHERE sku = @sku
+  WHERE id = @id
 `);
+const ensureExists = db.prepare(`
+  INSERT INTO inventory (id, name, stock)
+  VALUES (?, ?, 0)
+  ON CONFLICT(id) DO NOTHING
+`);
+const getEvent = db.prepare(
+  "SELECT event_id FROM webhook_events WHERE event_id = ?"
+);
+const insertEvent = db.prepare(
+  "INSERT INTO webhook_events (event_id, payload) VALUES (?, ?)"
+);
 
-const applyInventory = db.transaction((eventId, payload) => {
-  const { changes = [], source } = payload;
+const applyInventoryChanges = db.transaction((eventId, payload) => {
+  const { items = [], source } = payload;
+  const results = [];
 
-  changes.forEach((change) => {
-    const sku = (change.sku || "").trim();
-    if (!sku) throw new Error("Each change must include a non-empty sku");
-
-    const name = change.name || sku;
-    const hasQuantity = typeof change.quantity === "number";
-    const hasDelta = typeof change.delta === "number";
+  items.forEach((item) => {
+    const id = String(item.id || "").trim();
+    if (!id) throw new Error("Each item requires a non-empty id");
+    const name = (item.name || id).trim() || id;
+    const hasQuantity =
+      typeof item.quantity === "number" && Number.isFinite(item.quantity);
+    const hasDelta =
+      typeof item.delta === "number" && Number.isFinite(item.delta);
 
     if (!hasQuantity && !hasDelta) {
-      throw new Error(`Change for sku ${sku} requires quantity or delta`);
+      throw new Error(`Item ${id} requires quantity or delta`);
     }
 
-    ensureMaterial.run(sku, name);
+    ensureExists.run(id, name);
 
+    let newStock = 0;
     if (hasQuantity) {
-      upsertMaterial.run({ sku, name, stock: change.quantity });
+      newStock = Math.max(0, Math.round(item.quantity));
+      upsertItem.run({ id, name, stock: newStock });
     } else {
-      adjustMaterial.run({ sku, name, delta: change.delta });
+      const delta = Math.round(item.delta);
+      updateDelta.run({ id, name, delta });
+      const updated = getItem.get(id);
+      newStock = updated ? updated.stock : 0;
     }
+
+    results.push({ id, name, stock: newStock, source: source || null });
   });
 
-  insertEvent.run(eventId, JSON.stringify(payload), source || null);
+  insertEvent.run(eventId, JSON.stringify(payload));
+  return results;
 });
 
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok", db: "connected" });
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok", service: "mu-backend", ts: Date.now() });
 });
 
-app.get("/materials", (_req, res) => {
-  const materials = db
-    .prepare(
-      "SELECT sku, name, stock, updated_at as updatedAt FROM materials ORDER BY sku"
-    )
-    .all();
-  res.json({ items: materials, count: materials.length });
+app.get("/api/inventory/:id", (req, res) => {
+  const id = String(req.params.id || "").trim();
+  if (!id) return res.status(400).json({ error: "Missing id" });
+  const item = getItem.get(id);
+  if (!item) return res.status(404).json({ error: "Item not found" });
+  return res.json({ item });
 });
 
-app.post("/webhook/inventory", (req, res) => {
-  if (!WEBHOOK_SECRET) {
-    return res.status(500).json({ error: "WEBHOOK_SECRET is not configured" });
-  }
-
+app.post("/api/webhooks/inventory", (req, res) => {
   const providedSecret = req.headers["x-webhook-secret"];
-  if (providedSecret !== WEBHOOK_SECRET) {
-    return res.status(401).json({ error: "Unauthorized: invalid secret" });
+  if (!WEBHOOK_SECRET || providedSecret !== WEBHOOK_SECRET) {
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const { eventId, changes } = req.body || {};
-  if (!eventId || !Array.isArray(changes)) {
-    return res.status(400).json({
-      error: "Payload must include eventId and array of changes",
-    });
+  const { eventId, items } = req.body || {};
+
+  if (typeof eventId !== "string" || !eventId.trim()) {
+    return res.status(400).json({ error: "eventId is required" });
+  }
+  if (!Array.isArray(items) || !items.length) {
+    return res.status(400).json({ error: "items must be a non-empty array" });
   }
 
-  const alreadyProcessed = selectEvent.get(eventId);
-  if (alreadyProcessed) {
-    return res.status(200).json({
-      status: "duplicate",
-      processed: false,
-      message: "Event already processed",
-    });
+  const existing = getEvent.get(eventId);
+  if (existing) {
+    return res
+      .status(200)
+      .json({ status: "duplicate", processed: false, items: [] });
   }
 
   try {
-    applyInventory(eventId, req.body);
-    res.json({
+    const results = applyInventoryChanges(eventId, req.body);
+    return res.json({
       status: "processed",
       processed: true,
-      items: changes.length,
+      items: results,
     });
   } catch (err) {
-    console.error("Failed to process inventory webhook", err);
-    res.status(400).json({
-      error: err.message || "Failed to apply inventory changes",
-    });
+    console.error("[webhook] failed to apply changes", err);
+    return res
+      .status(400)
+      .json({ error: err.message || "Failed to apply inventory changes" });
   }
 });
 
 app.use((err, _req, res, _next) => {
-  console.error("Unhandled error", err);
+  console.error("[global-error]", err);
   res.status(500).json({ error: "Internal server error" });
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`Backend ready on http://0.0.0.0:${PORT}`);
-});
-
-["SIGTERM", "SIGINT"].forEach((signal) => {
-  process.on(signal, () => {
-    server.close(() => {
-      db.close();
-      process.exit(0);
-    });
-  });
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Backend running on http://0.0.0.0:${PORT}`);
 });

@@ -6,32 +6,38 @@ const migrations = [
   {
     name: "2025-12-02-init",
     script: `
-      CREATE TABLE IF NOT EXISTS materials (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sku TEXT NOT NULL UNIQUE,
+      CREATE TABLE IF NOT EXISTS inventory (
+        id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         stock INTEGER NOT NULL DEFAULT 0,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE TABLE IF NOT EXISTS inventory_events (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        event_id TEXT NOT NULL UNIQUE,
-        payload TEXT NOT NULL,
-        received_from TEXT,
-        received_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      CREATE TABLE IF NOT EXISTS webhook_events (
+        event_id TEXT PRIMARY KEY,
+        payload TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE INDEX IF NOT EXISTS idx_materials_sku ON materials (sku);
-      CREATE INDEX IF NOT EXISTS idx_events_event_id ON inventory_events (event_id);
+      CREATE INDEX IF NOT EXISTS idx_inventory_name ON inventory(name);
     `,
   },
 ];
 
+function ensureDir(filePath) {
+  const dir = path.dirname(filePath);
+  fs.mkdirSync(dir, { recursive: true });
+}
+
 function openDatabase(dbPath) {
   const resolved = path.resolve(dbPath);
-  fs.mkdirSync(path.dirname(resolved), { recursive: true });
-  return new Database(resolved);
+  ensureDir(resolved);
+  const db = new Database(resolved);
+  db.pragma("journal_mode = WAL");
+  db.pragma("foreign_keys = ON");
+  runMigrations(db);
+  return db;
 }
 
 function runMigrations(db) {
@@ -43,21 +49,18 @@ function runMigrations(db) {
   `);
 
   migrations.forEach((migration) => {
-    const alreadyRun = db
+    const exists = db
       .prepare("SELECT 1 FROM migrations WHERE name = ?")
       .get(migration.name);
-    if (alreadyRun) return;
-
+    if (exists) return;
     const apply = db.transaction(() => {
       db.exec(migration.script);
       db.prepare("INSERT INTO migrations (name) VALUES (?)").run(migration.name);
     });
-
     apply();
   });
 }
 
 module.exports = {
   openDatabase,
-  runMigrations,
 };
