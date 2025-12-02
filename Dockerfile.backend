@@ -1,0 +1,29 @@
+# syntax=docker/dockerfile:1.6
+
+FROM node:20-alpine AS deps
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Manifests para caché
+COPY package.json package-lock.json ./
+COPY backend/package.json backend/package.json
+
+# Instala deps del backend usando workspaces
+RUN if [ -f package-lock.json ]; then \
+      npm ci --omit=dev --include-workspace-root=false -w backend; \
+    else \
+      cd backend && npm ci --omit=dev; \
+    fi
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=4000
+
+COPY backend/ ./backend/
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/backend/node_modules ./backend/node_modules
+
+EXPOSE 4000
+WORKDIR /app/backend
+CMD ["node", "src/server.js"]

@@ -1,0 +1,10 @@
+**/node_modules
+**/.DS_Store
+**/artifacts
+**/.env
+**/*.local
+**/*.log
+.git
+dist
+build
+coverage

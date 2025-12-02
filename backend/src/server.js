@@ -18,6 +18,9 @@ app.get("/api/health", (_req, res) => {
 
 app.get("/api/inventory/:id", (req, res) => {
   const id = String(req.params.id);
+  if (!inventory.has(id)) {
+    return res.status(404).json({ error: "not_found", material_id: id });
+  }
   res.json({ material_id: id, stock: inventory.get(id) ?? 0 });
 });
 
