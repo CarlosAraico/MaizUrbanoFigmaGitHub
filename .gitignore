@@ -17,6 +17,7 @@ frontend/node_modules/
 figma-plugin/node_modules/
 figma-plugin/dist/
 figma-plugin/mu-figma-plugin.zip
+artifacts/
 .DS_Store
 Thumbs.db
 .vscode/

@@ -1,12 +1,23 @@
 param(
-  [string]$Base = $env:PLUGIN_BASE,
-  [string]$Secret = $env:WEBHOOK_SECRET,
-  [string]$MaterialId = $(if ($env:MATERIAL_ID) { $env:MATERIAL_ID } else { "corn-blue" }),
-  [int]$NewStock = $(if ($env:NEW_STOCK) { [int]$env:NEW_STOCK } else { 123 })
+[string]$Base = $env:PLUGIN_BASE,
+[string]$Secret = $env:WEBHOOK_SECRET,
+[string]$MaterialId = $(if ($env:MATERIAL_ID) { $env:MATERIAL_ID } else { "corn-blue" }),
+[int]$NewStock = $(if ($env:NEW_STOCK) { [int]$env:NEW_STOCK } else { 123 })
 )
 
 function Fail([string]$msg) { Write-Error "❌ $msg"; exit 1 }
 function Ok([string]$msg) { Write-Host "✅ $msg" }
+
+# Carga opcional desde figma-plugin/.env.local si faltan valores
+if (([string]::IsNullOrWhiteSpace($Base) -or [string]::IsNullOrWhiteSpace($Secret)) -and (Test-Path "figma-plugin/.env.local")) {
+  foreach ($line in Get-Content "figma-plugin/.env.local") {
+    if ($line -match '^(PLUGIN_BASE|PLUGIN_SECRET|WEBHOOK_SECRET)=(.*)$') {
+      $k = $Matches[1]; $v = $Matches[2];
+      if ([string]::IsNullOrWhiteSpace($Base) -and $k -eq "PLUGIN_BASE") { $Base = $v }
+      if ([string]::IsNullOrWhiteSpace($Secret) -and ($k -eq "PLUGIN_SECRET" -or $k -eq "WEBHOOK_SECRET")) { $Secret = $v }
+    }
+  }
+}
 
 if ([string]::IsNullOrWhiteSpace($Base) -or [string]::IsNullOrWhiteSpace($Secret)) {
   Write-Host "Uso:"

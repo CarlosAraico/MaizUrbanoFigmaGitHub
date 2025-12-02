@@ -15,8 +15,10 @@
     "build:frontend": "npm --workspace frontend run build",
     "build:plugin": "npm --workspace figma-plugin run build",
     "zip:plugin": "cd figma-plugin/dist && zip -r ../mu-figma-plugin.zip .",
-    "test:e2e": "bash ./scripts/verify.sh",
-    "test:e2e:win": "powershell -ExecutionPolicy Bypass -File ./scripts/verify.ps1"
+    "test:e2e": "node ./scripts/verify.mjs || bash ./scripts/verify.sh",
+    "test:e2e:win": "node ./scripts/verify.mjs || powershell -ExecutionPolicy Bypass -File ./scripts/verify.ps1",
+    "test:e2e:node": "node ./scripts/verify.mjs",
+    "test:e2e:ci": "node ./scripts/verify.mjs --strict"
   },
   "devDependencies": {
     "dotenv": "^16.4.5",

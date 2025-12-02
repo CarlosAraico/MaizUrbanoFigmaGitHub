@@ -1,0 +1,45 @@
+name: E2E Webhook (remote tunnel)
+
+on:
+  workflow_dispatch:
+    inputs:
+      plugin_base:
+        description: "https://<tu>.ngrok-free.dev"
+        required: true
+      webhook_secret:
+        description: "WEBHOOK_SECRET (mismo que PLUGIN_SECRET)"
+        required: true
+      material_id:
+        description: "Material ID"
+        default: "corn-blue"
+        required: false
+      new_stock:
+        description: "Valor de stock"
+        default: "123"
+        required: false
+
+jobs:
+  e2e-remote:
+    runs-on: ubuntu-latest
+    env:
+      PLUGIN_BASE: ${{ inputs.plugin_base }}
+      WEBHOOK_SECRET: ${{ inputs.webhook_secret }}
+      MATERIAL_ID: ${{ inputs.material_id }}
+      NEW_STOCK: ${{ inputs.new_stock }}
+      REPORT_PATH: artifacts/e2e-report.json
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install deps (light)
+        run: npm ci --ignore-scripts --no-audit --no-fund || true
+      - name: Run E2E against provided tunnel
+        run: npm run test:e2e:ci
+      - name: Upload E2E JSON report
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-remote-report
+          path: artifacts/e2e-report.json
+          if-no-files-found: warn

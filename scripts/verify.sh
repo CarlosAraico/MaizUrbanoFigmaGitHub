@@ -11,6 +11,17 @@ EVENT_ID="evt-$(date +%s)"
 fail() { echo "❌ $*" >&2; exit 1; }
 ok()   { echo "✅ $*"; }
 
+# Carga opcional desde figma-plugin/.env.local si no viene por env/argv
+if [[ ( -z "${BASE}" || -z "${SECRET}" ) && -f "figma-plugin/.env.local" ]]; then
+  while IFS='=' read -r key val; do
+    case "$key" in
+      "PLUGIN_BASE") [[ -z "${BASE}" ]] && BASE="$val" ;;
+      "PLUGIN_SECRET") [[ -z "${SECRET}" ]] && SECRET="$val" ;;
+      "WEBHOOK_SECRET") [[ -z "${SECRET}" ]] && SECRET="$val" ;;
+    esac
+  done < <(grep -E '^(PLUGIN_BASE|PLUGIN_SECRET|WEBHOOK_SECRET)=' figma-plugin/.env.local || true)
+fi
+
 if [[ -z "${BASE}" || -z "${SECRET}" ]]; then
   cat <<EOF >&2
 Uso:
