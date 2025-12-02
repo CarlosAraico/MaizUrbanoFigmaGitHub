@@ -187,3 +187,8 @@
 html {
   font-size: var(--font-size);
 }
+
+[data-mu-animate] {
+  opacity: 0;
+  transform: translateY(24px);
+}
