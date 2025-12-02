@@ -1,0 +1,86 @@
+name: Deploy (production)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "backend/**"
+      - "docker-compose.prod.yml"
+      - ".github/workflows/deploy-prod.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.expose-url.outputs.app_url || '' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve image name
+        id: img
+        run: |
+          REPO_LC="$(echo '${{ github.event.repository.name }}' | tr '[:upper:]' '[:lower:]')"
+          echo "name=ghcr.io/${{ github.repository_owner }}/${REPO_LC}-backend:latest" >> $GITHUB_OUTPUT
+
+      - name: SSH – deploy compose
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || '22' }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+
+            REPO_PATH="${{ secrets.PROD_REPO_PATH }}"
+
+            if [ -z "$REPO_PATH" ]; then
+              echo "Missing PROD_REPO_PATH secret" >&2
+              exit 1
+            fi
+
+            if [ ! -d "$REPO_PATH/.git" ]; then
+              echo "Clonando repo porque no existe en $REPO_PATH"
+              mkdir -p "$REPO_PATH"
+              git clone --depth 1 https://github.com/${{ github.repository }}.git "$REPO_PATH"
+            fi
+
+            cd "$REPO_PATH"
+            git fetch --all --prune
+            git checkout main
+            git pull --ff-only
+
+            if [ -n "${{ secrets.PROD_ENV_B64 }}" ]; then
+              echo "Actualizando backend/.env desde PROD_ENV_B64"
+              install -d backend
+              echo "${{ secrets.PROD_ENV_B64 }}" | base64 -d > backend/.env
+            fi
+
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+            docker network inspect maiz-net >/dev/null 2>&1 || docker network create maiz-net
+            docker volume ls | grep -q maiz-data || docker volume create maiz-data
+
+            docker pull "${{ steps.img.outputs.name }}"
+
+            docker compose -f docker-compose.prod.yml up -d
+
+            echo "APP_URL=http://$(hostname -I | awk '{print $1}'):4000" > deploy_url.out
+
+      - name: Expose app url
+        id: expose-url
+        if: always()
+        run: |
+          if [ -f deploy_url.out ]; then
+            echo "app_url=$(cut -d= -f2 < deploy_url.out)" >> $GITHUB_OUTPUT
+          fi
