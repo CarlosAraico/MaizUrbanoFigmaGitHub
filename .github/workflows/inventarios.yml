@@ -18,6 +18,10 @@ permissions:
   packages: write
   security-events: write
 
+concurrency:
+  group: inventarios-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   inventarios:
     runs-on: ubuntu-latest
@@ -54,7 +58,7 @@ jobs:
             echo "backend/src/server.js no existe, se omite arranque local."
           fi
 
-      - name: Validar contrato (opcional)
+      - name: Validar contrato (opcional con plugin:start --no-up --no-e2e)
         env:
           CI: true
         run: |
@@ -62,7 +66,7 @@ jobs:
             echo "Validando contrato contra ${PLUGIN_BASE} ..."
             npm run plugin:start -- --no-up --no-e2e
           else
-            echo "PLUGIN_BASE/WEBHOOK_SECRET no definidos en Secrets → se omite validación remota."
+            echo "PLUGIN_BASE/WEBHOOK_SECRET no definidos en Secrets -> se omite validacion remota."
           fi
 
   docker_backend:
@@ -73,25 +77,22 @@ jobs:
       IMAGE: ghcr.io/carlosaraico/maizurbanofigmagithub-backend
       DOCKERFILE_PATH: ./Dockerfile.backend
       BUILD_CONTEXT: .
-    if: |
-      github.event_name == 'push' ||
-      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Derivar metadata
+      - name: Derivar metadata (tags, version, created)
         id: meta
         shell: bash
         run: |
           SHORT="$(git rev-parse --short HEAD)"
           BRANCH="${GITHUB_REF_NAME:-}"
           SAN_BRANCH="$(echo "${BRANCH}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]/-/g')"
+          PR=""
           if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
             PR="${{ github.event.pull_request.number }}"
-          else
-            PR=""
           fi
           DATE_TAG="$(date -u +%Y%m%d)"
           CREATED="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
@@ -100,32 +101,29 @@ jobs:
 
           TAGS="${IMAGE}:sha-${SHORT}
 ${IMAGE}:date-${DATE_TAG}"
-
           if [ -n "${SAN_BRANCH}" ]; then
             TAGS="${TAGS}
 ${IMAGE}:branch-${SAN_BRANCH}"
           fi
-
           if [ -n "${PR}" ]; then
             TAGS="${TAGS}
 ${IMAGE}:pr-${PR}
 ${IMAGE}:pr-${PR}-sha-${SHORT}"
           fi
-
           if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${BRANCH}" = "main" ]; then
             TAGS="${TAGS}
 ${IMAGE}:latest"
           fi
 
-          echo "short=${SHORT}"     >> "$GITHUB_OUTPUT"
-          echo "created=${CREATED}" >> "$GITHUB_OUTPUT"
-          echo "source=${SOURCE}"   >> "$GITHUB_OUTPUT"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "tags<<EOF"          >> "$GITHUB_OUTPUT"
-          echo "${TAGS}"            >> "$GITHUB_OUTPUT"
-          echo "EOF"                >> "$GITHUB_OUTPUT"
+          echo "short=${SHORT}"        >> "$GITHUB_OUTPUT"
+          echo "created=${CREATED}"    >> "$GITHUB_OUTPUT"
+          echo "source=${SOURCE}"      >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}"    >> "$GITHUB_OUTPUT"
+          echo "tags<<EOF"             >> "$GITHUB_OUTPUT"
+          echo "${TAGS}"               >> "$GITHUB_OUTPUT"
+          echo "EOF"                   >> "$GITHUB_OUTPUT"
 
-      - name: Setup QEMU
+      - name: Setup QEMU (multi-arch)
         uses: docker/setup-qemu-action@v3
 
       - name: Setup Buildx
@@ -138,7 +136,7 @@ ${IMAGE}:latest"
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & Push multi-arch
+      - name: Build & Push (linux/amd64, linux/arm64) con labels OCI
         id: build
         uses: docker/build-push-action@v6
         with:
@@ -166,7 +164,7 @@ ${IMAGE}:latest"
           path: artifacts/sbom-backend.spdx.json
           format: spdx-json
 
-      - name: Escanear vulnerabilidades (Grype) → SARIF
+      - name: Escanear vulnerabilidades (Grype) -> SARIF
         uses: anchore/scan-action@v3
         with:
           image: ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
