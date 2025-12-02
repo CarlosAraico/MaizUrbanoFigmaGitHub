@@ -26,15 +26,12 @@ npm run up             # dev backend + frontend + plugin watch + tunel ngrok
 POST `/api/webhooks/inventory` con header `X-Webhook-Secret` y payload:
 ```json
 {
-  "eventId": "evt-001",
-  "items": [
-    {"id": "corn-blue", "name": "Maiz azul", "quantity": 110},
-    {"id": "corn-yellow", "delta": -5}
-  ],
-  "source": "qa"
+  "event_id": "evt-001",
+  "material_id": "corn-blue",
+  "new_stock": 110
 }
 ```
-Idempotencia: eventos repetidos (mismo `eventId`) responden `duplicate` sin aplicar cambios.
+Idempotencia: eventos repetidos (mismo `event_id`) responden `idempotent: true` sin aplicar cambios.
 
 ## Plugin Figma
 1) Corre `npm run up` y espera el tunel (https) impreso.

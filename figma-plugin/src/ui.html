@@ -127,8 +127,9 @@
   -H "Content-Type: application/json" \\
   -H "X-Webhook-Secret: ${secret || "<secret>"}" \\
   -d '{
-    "eventId": "evt-figma-demo",
-    "items": [{"id": "corn-blue", "quantity": 125}]
+    "event_id": "evt-figma-demo",
+    "material_id": "corn-blue",
+    "new_stock": 125
   }'`;
 
       async function queryInventory() {
@@ -138,8 +139,8 @@
         try {
           const res = await fetch(`${base}/api/inventory/${id}`);
           if (!res.ok) throw new Error("Item no encontrado");
-          const { item } = await res.json();
-          resultEl.textContent = `${item.name} · Stock: ${item.stock}`;
+          const data = await res.json();
+          resultEl.textContent = `${data.material_id} · Stock: ${data.stock}`;
           parent?.postMessage?.(
             { pluginMessage: { type: "notify", message: "Inventario listo" } },
             "*"
@@ -165,15 +166,15 @@
               "X-Webhook-Secret": secret,
             },
             body: JSON.stringify({
-              eventId: `figma-${Date.now()}`,
-              items: [{ id, quantity: stock }],
-              source: "figma-plugin",
+              event_id: `figma-${Date.now()}`,
+              material_id: id,
+              new_stock: stock,
             }),
           });
 
           const body = await res.json();
           if (!res.ok) throw new Error(body.error || "Webhook fallo");
-          webhookEl.textContent = `OK (${body.items?.length || 0} items)`;
+          webhookEl.textContent = `OK stock=${body.stock}`;
           parent?.postMessage?.(
             { pluginMessage: { type: "notify", message: "Webhook procesado" } },
             "*"

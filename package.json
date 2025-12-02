@@ -3,7 +3,7 @@
   "private": true,
   "workspaces": ["backend", "frontend", "figma-plugin"],
   "scripts": {
-    "setup": "npm i && mkdir -p scripts && cp -n backend/.env.example backend/.env || true",
+    "setup": "npm i && node -e \"const fs=require('fs');fs.mkdirSync('scripts',{recursive:true});const src='backend/.env.example';const dest='backend/.env';if(!fs.existsSync(dest)&&fs.existsSync(src)){fs.copyFileSync(src,dest);console.log('backend/.env creado');}\"",
     "up": "npm-run-all -p dev:backend dev:frontend plugin:watch tunnel",
     "down": "node scripts/tunnel.mjs --stop",
     "dev:backend": "npm --workspace backend run dev",
