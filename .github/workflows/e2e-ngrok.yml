@@ -1,0 +1,71 @@
+name: E2E Webhook (ngrok en CI, unified)
+
+on:
+  workflow_dispatch: {}
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  e2e-ngrok:
+    runs-on: ubuntu-latest
+    env:
+      WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+      NGROK_AUTHTOKEN: ${{ secrets.NGROK_AUTHTOKEN }}
+      MATERIAL_ID: corn-blue
+      NEW_STOCK: 123
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps (light)
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund || true
+          npm --workspace figma-plugin ci --ignore-scripts --no-audit --no-fund || true
+
+      - name: Start backend
+        run: |
+          node backend/src/server.js &
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:4000/api/health && break
+            sleep 1
+          done
+
+      - name: Install ngrok
+        run: npm i ngrok --no-save
+
+      - name: Start ngrok (expose :4000) and export PLUGIN_BASE
+        env:
+          NGROK_AUTHTOKEN: ${{ secrets.NGROK_AUTHTOKEN }}
+        run: |
+          node -e "import ngrok from 'ngrok'; (async () => {
+            const url = await ngrok.connect({ addr: 4000, authtoken: process.env.NGROK_AUTHTOKEN, proto: 'http' });
+            console.log('NGROK_URL=' + url);
+            require('fs').appendFileSync(process.env.GITHUB_ENV, `PLUGIN_BASE=${url}\n`);
+          })().catch(e => { console.error(e); process.exit(1); });"
+      - name: Show PLUGIN_BASE
+        run: echo "PLUGIN_BASE=$PLUGIN_BASE"
+
+      - name: Start + Build + E2E + ZIP (plugin:start)
+        env:
+          CI: true
+        run: |
+          npm run plugin:start -- --zip --no-up
+
+      - name: Upload E2E JSON report (si existe)
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-ngrok-report
+          path: artifacts/e2e-report.json
+          if-no-files-found: warn
+
+      - name: Upload Plugin ZIP + SHA256 + Build Manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: figma-plugin-package
+          path: |
+            artifacts/*.zip
+            artifacts/*.zip.sha256
+            artifacts/*.build.json
+          if-no-files-found: error

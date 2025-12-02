@@ -1,33 +1,39 @@
-# Maíz Urbano – Landing MU-v4
+# Maiz Urbano - Dev Stack
 
-Landing corporativa modular para Maíz Urbano, lista para Dev Mode en Figma y publicación en GitHub Pages.
+Monorepo con backend Express + SQLite, frontend Vite+React+Tailwind y plugin de Figma. Usa npm workspaces.
 
-## Arquitectura
-- `src/design-system`: tokens (`colors`, `typography`, `spacing`) y componentes base (`Button`, `Chip`, `Card`, `Metric`, `SectionShell`).
-- `src/mu/components`: bloques de dominio (hero, menú, franquicias, empleo, sucursales, footer).
-- `src/mu/landing/MuLanding.tsx`: composición final de la página (Navbar + secciones: Hero, Menú, Origen, Impacto, Trazabilidad, CEDIS, Inversión, Franquicias, Empleo, Sucursales, Footer).
-- `src/styles/globals.css`: reset y estilos globales.
-- `src/legacy`: código operativo anterior (admin, carrito, login, etc.) aislado y fuera del build.
+## Quickstart
+```bash
+npm run setup          # instala deps de workspace y prepara backend/.env si no existe
+npm run up             # dev backend + frontend + plugin watch + tunel ngrok
+# Backend: http://127.0.0.1:4000/api/health
+# Frontend: http://127.0.0.1:5173
+# Ngrok: URL https impresa en consola, y escribe figma-plugin/.env.local
+```
 
-## Scripts
-- `npm run dev` – servidor de desarrollo Vite.
-- `npm run build` – build de producción en `dist/`.
-- `npm run preview` – previsualiza el build.
-- `npm run deploy` – publica `dist/` a GitHub Pages (rama `gh-pages`). `predeploy` ejecuta el build antes.
+## Comandos utiles
+- `npm run down`: detiene tunel ngrok.
+- `npm run build`: build backend/frontend/plugin.
+- `npm run zip:plugin`: genera `figma-plugin/mu-figma-plugin.zip` desde `figma-plugin/dist`.
 
-## GitHub Pages
-1. `npm install`
-2. `npm run deploy`
-3. En GitHub ? Settings ? Pages ? Source: `gh-pages` / root.
-4. URL esperada: `https://<usuario>.github.io/MaizUrbanoFigmaGitHub/`.
+## Estructura
+- `backend/`: API Express (`/api/health`, `/api/inventory/:id`, webhook idempotente `/api/webhooks/inventory`).
+- `frontend/`: Vite+React+Tailwind, Hero y consulta de inventario.
+- `figma-plugin/`: plugin Figma (Vite). Usa `.env.local` con `PLUGIN_BASE` y `PLUGIN_SECRET` escritos por `scripts/tunnel.mjs`.
+- `scripts/tunnel.mjs`: espera al backend, abre ngrok https y sincroniza env del plugin.
 
-## Figma (Dev Mode)
-- Archivo sugerido: **MU – Design System & Landing v4** con páginas:
-  - 01 – Design System (tokens de color/typo alineados a `src/design-system/tokens`).
-  - 02 – Landing MU-v4 (secciones en el mismo orden que `MuLanding`).
-- Activa Dev Mode y vincula el repo `MaizUrbanoFigmaGitHub` apuntando a `src/mu/landing/MuLanding.tsx` para inspección de props/CSS.
-- Navbar en Figma con interacciones “Scroll to” hacia los IDs: `mu-menu`, `mu-franquicias`, `mu-empleo`, `mu-sucursales`, etc.
+## Webhook de inventario
+POST `/api/webhooks/inventory` con header `X-Webhook-Secret` y payload:
+```json
+{
+  "event_id": "evt-001",
+  "material_id": "corn-blue",
+  "new_stock": 110
+}
+```
+Idempotencia: eventos repetidos (mismo `event_id`) responden `idempotent: true` sin aplicar cambios.
 
-## Notas
-- Encoding forzado a UTF-8 vía `.gitattributes`.
-- Dependencias reducidas a React + Vite; el código operativo (admin/facturación/carrito) permanece en `src/legacy` para futuras fases.
+## Plugin Figma
+1) Corre `npm run up` y espera el tunel (https) impreso.
+2) En Figma Desktop: Plugins -> Development -> Import from manifest -> `figma-plugin/manifest.json`.
+3) El plugin lee `PLUGIN_BASE` y `PLUGIN_SECRET` desde `.env.local` para consumir el backend.

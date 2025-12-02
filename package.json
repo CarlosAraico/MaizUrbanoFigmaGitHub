@@ -1,25 +1,34 @@
 {
-  "name": "maiz-urbano-landing",
-  "version": "0.1.0",
+  "name": "maiz-urbano",
   "private": true,
+  "workspaces": ["backend", "frontend", "figma-plugin"],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
-  },
-  "dependencies": {
-    "gsap": "^3.13.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "setup": "npm i && node -e \"const fs=require('fs');fs.mkdirSync('scripts',{recursive:true});const src='backend/.env.example';const dest='backend/.env';if(!fs.existsSync(dest)&&fs.existsSync(src)){fs.copyFileSync(src,dest);console.log('backend/.env creado');}\"",
+    "up": "npm-run-all -p dev:backend dev:frontend plugin:watch tunnel",
+    "down": "node scripts/tunnel.mjs --stop",
+    "dev:backend": "npm --workspace backend run dev",
+    "dev:frontend": "npm --workspace frontend run dev",
+    "plugin:watch": "npm --workspace figma-plugin run dev",
+    "tunnel": "node scripts/tunnel.mjs",
+    "build": "npm-run-all -p build:backend build:frontend build:plugin",
+    "build:backend": "npm --workspace backend run build",
+    "build:frontend": "npm --workspace frontend run build",
+    "build:plugin": "npm --workspace figma-plugin run build",
+    "zip:plugin": "cd figma-plugin/dist && zip -r ../mu-figma-plugin.zip .",
+    "test:e2e": "node ./scripts/verify.mjs || bash ./scripts/verify.sh",
+    "test:e2e:win": "node ./scripts/verify.mjs || powershell -ExecutionPolicy Bypass -File ./scripts/verify.ps1",
+    "test:e2e:node": "node ./scripts/verify.mjs",
+    "test:e2e:ci": "node ./scripts/verify.mjs --strict",
+    "plugin:doctor": "node ./scripts/plugin-doctor.mjs",
+    "plugin:doctor:fix": "node ./scripts/plugin-doctor.mjs --fix",
+    "plugin:zip": "node ./scripts/build-plugin-zip.mjs",
+    "plugin:start": "node ./scripts/plugin-start.mjs",
+    "plugin:release": "gh workflow run plugin-release.yml -f version=$npm_config_version -f name=$npm_config_name -f prerelease=$npm_config_prerelease"
   },
   "devDependencies": {
-    "@types/node": "^20.10.0",
-    "@types/react": "^18.3.11",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react-swc": "^3.10.2",
-    "gh-pages": "^6.2.0",
-    "vite": "6.3.5"
+    "dotenv": "^16.4.5",
+    "ngrok": "^5.0.0-beta.2",
+    "npm-run-all": "^4.1.5",
+    "wait-on": "^7.2.0"
   }
 }
