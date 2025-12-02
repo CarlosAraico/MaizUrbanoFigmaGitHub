@@ -1,0 +1,18 @@
+{
+  "name": "mu-backend",
+  "version": "0.1.0",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "seed": "node ./scripts/seed.js",
+    "test": "node -e \"console.log('No automated tests yet')\""
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.5.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^4.19.2"
+  }
+}
