@@ -22,7 +22,8 @@
     "plugin:doctor": "node ./scripts/plugin-doctor.mjs",
     "plugin:doctor:fix": "node ./scripts/plugin-doctor.mjs --fix",
     "plugin:zip": "node ./scripts/build-plugin-zip.mjs",
-    "plugin:start": "node ./scripts/plugin-start.mjs"
+    "plugin:start": "node ./scripts/plugin-start.mjs",
+    "plugin:release": "gh workflow run plugin-release.yml -f version=$npm_config_version -f name=$npm_config_name -f prerelease=$npm_config_prerelease"
   },
   "devDependencies": {
     "dotenv": "^16.4.5",

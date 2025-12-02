@@ -1,0 +1,86 @@
+name: Plugin Release (tag + GitHub Release)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Tag semver, ej: v1.4.0"
+        required: true
+      name:
+        description: "Nombre del Release (opcional, por defecto = tag)"
+        required: false
+      prerelease:
+        description: "Marcar como pre-release"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+      NGROK_AUTHTOKEN: ${{ secrets.NGROK_AUTHTOKEN }}
+      MATERIAL_ID: corn-blue
+      NEW_STOCK: 123
+      CI: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps (light)
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund || true
+          npm --workspace figma-plugin ci --ignore-scripts --no-audit --no-fund || true
+
+      - name: Start backend
+        run: |
+          node backend/src/server.js &
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:4000/api/health && break
+            sleep 1
+          done
+
+      - name: Install ngrok
+        run: npm i ngrok --no-save
+
+      - name: Start ngrok (expose :4000) and export PLUGIN_BASE
+        env:
+          NGROK_AUTHTOKEN: ${{ secrets.NGROK_AUTHTOKEN }}
+        run: |
+          node -e "import ngrok from 'ngrok'; (async () => {
+            const url = await ngrok.connect({ addr: 4000, authtoken: process.env.NGROK_AUTHTOKEN, proto: 'http' });
+            console.log('NGROK_URL=' + url);
+            require('fs').appendFileSync(process.env.GITHUB_ENV, `PLUGIN_BASE=${url}\n`);
+          })().catch(e => { console.error(e); process.exit(1); });"
+      - name: Show PLUGIN_BASE
+        run: echo "PLUGIN_BASE=$PLUGIN_BASE"
+
+      - name: Build + E2E + ZIP (plugin:start)
+        run: npm run plugin:start -- --zip --no-up
+
+      - name: Collect package artifacts
+        id: collect
+        run: |
+          echo "zip=$(ls -1 artifacts/*.zip | tail -n1)" >> $GITHUB_OUTPUT
+          echo "sha=$(ls -1 artifacts/*.zip.sha256 | tail -n1)" >> $GITHUB_OUTPUT
+          echo "meta=$(ls -1 artifacts/*.build.json | tail -n1)" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          name: ${{ inputs.name || inputs.version }}
+          prerelease: ${{ inputs.prerelease }}
+          generate_release_notes: true
+          files: |
+            ${{ steps.collect.outputs.zip }}
+            ${{ steps.collect.outputs.sha }}
+            ${{ steps.collect.outputs.meta }}
