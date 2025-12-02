@@ -1,0 +1,51 @@
+name: Build & Package Figma Plugin (local base)
+
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch: {}
+
+jobs:
+  plugin-build-zip:
+    runs-on: ubuntu-latest
+    env:
+      PLUGIN_BASE: http://127.0.0.1:4000
+      WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install deps (light)
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund || true
+          npm --workspace figma-plugin ci --ignore-scripts --no-audit --no-fund || true
+
+      - name: Start backend
+        run: |
+          node backend/src/server.js &
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:4000/api/health && break
+            sleep 1
+          done
+
+      - name: Build + ZIP (plugin:start)
+        env:
+          CI: true
+        run: |
+          if [ -z "${WEBHOOK_SECRET:-}" ]; then
+            npm run plugin:start -- --no-up --no-e2e --zip
+          else
+            npm run plugin:start -- --no-up --zip
+          fi
+
+      - name: Upload Package (ZIP + SHA256 + Manifest) y Reporte E2E (si existe)
+        uses: actions/upload-artifact@v4
+        with:
+          name: figma-plugin-package-local
+          path: |
+            artifacts/*.zip
+            artifacts/*.zip.sha256
+            artifacts/*.build.json
+            artifacts/e2e-report.json
+          if-no-files-found: warn
