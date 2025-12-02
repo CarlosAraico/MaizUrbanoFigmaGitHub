@@ -53,7 +53,7 @@ async function main() {
     console.log("⚠️  Saltando `npm run up` (--no-up)");
   }
 
-  await waitForUrl("http://127.0.0.1:4000/api/health", 60_000, "Backend local");
+  await waitForUrl("http://127.0.0.1:4000/api/health", 120_000, "Backend local");
   if (!NO_UP) {
     await waitForFile(paths.pluginEnv, 60_000, "figma-plugin/.env.local");
   }

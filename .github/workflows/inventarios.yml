@@ -40,6 +40,44 @@ jobs:
       - name: Install deps (root, light)
         run: npm ci --ignore-scripts --no-audit --no-fund || true
 
+      - name: Validar backend/.env y mostrar resumen seguro
+        run: |
+          echo "🔍 Validando backend/.env.example y backend/.env..."
+
+          if [ ! -f backend/.env.example ]; then
+            echo "❌ Error: backend/.env.example no encontrado."
+            exit 1
+          fi
+
+          if [ ! -f backend/.env ]; then
+            echo "❌ Error: backend/.env no fue generado correctamente."
+            exit 1
+          fi
+
+          REQUIRED_VARS=(PORT DATABASE_URL PLUGIN_BASE WEBHOOK_SECRET)
+
+          MISSING=false
+          echo "🧪 Verificando variables obligatorias en backend/.env:"
+          for VAR in "${REQUIRED_VARS[@]}"; do
+            if grep -q "^$VAR=" backend/.env; then
+              echo "✅ $VAR está definido"
+            else
+              echo "❌ $VAR falta en backend/.env"
+              MISSING=true
+            fi
+          done
+
+          if [ "$MISSING" = true ]; then
+            echo "❌ Faltan variables críticas en backend/.env → abortando"
+            exit 1
+          fi
+
+          echo ""
+          echo "📋 Resumen seguro del archivo backend/.env:"
+          grep -E '^[A-Z0-9_]+=' backend/.env | cut -d= -f1 | while read VAR; do
+            echo "• $VAR = ********"
+          done
+
       - name: Lint workflows (actionlint)
         uses: rhysd/actionlint@v1
 
@@ -57,6 +95,21 @@ jobs:
           else
             echo "backend/src/server.js no existe, se omite arranque local."
           fi
+
+      - name: Esperar backend antes de validar contrato
+        run: |
+          echo "⌛ Esperando respuesta del backend (127.0.0.1:4000/api/health)..."
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:4000/api/health >/dev/null 2>&1; then
+              echo "✅ Backend respondió correctamente"
+              break
+            fi
+            if [ "$i" -eq 60 ]; then
+              echo "❌ Error: backend no respondió después de 60s"
+              exit 1
+            fi
+            sleep 1
+          done
 
       - name: Validar contrato (opcional con plugin:start --no-up --no-e2e)
         env:
