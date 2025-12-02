@@ -11,6 +11,7 @@ if (!SECRET) { console.error("Falta WEBHOOK_SECRET en backend/.env"); process.ex
 
 app.use(express.json());
 app.use(cors());
+app.options("/api/webhooks/inventory", cors());
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", service: "mu-v4-backend", ts: Date.now() });
