@@ -8,6 +8,11 @@ __pycache__/
 .venv/
 venv/
 .env
+.env.*
+!.env.example
+!backend/.env.example
+backend/.env
+backend/data/
 .DS_Store
 Thumbs.db
 .vscode/

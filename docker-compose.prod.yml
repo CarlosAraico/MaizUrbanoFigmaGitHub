@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  backend:
+    image: ghcr.io/carlosaraico/maizurbanofigmagithub-backend:latest
+    env_file:
+      - ./backend/.env
+    environment:
+      DB_PATH: /app/data/inventory.db
+      PORT: ${PORT:-4000}
+    ports:
+      - "${PORT:-4000}:4000"
+    volumes:
+      - ./backend/data:/app/data
+    restart: unless-stopped
