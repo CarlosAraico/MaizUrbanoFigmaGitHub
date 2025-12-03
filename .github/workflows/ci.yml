@@ -21,10 +21,23 @@ jobs:
           cache: npm
 
       - name: Install workspace dependencies
-        run: npm ci
+        # Try a fast, reproducible install first; if it fails (platform mismatch
+        # for optional native deps) fall back to `npm install` so platform
+        # specific optional dependencies (like Rollup native binaries) can be
+        # fetched for the runner OS.
+        run: npm ci || npm install
 
       - name: Build workspace packages
         run: npm run build
+
+      - name: Ensure Rollup native binary on Linux (fallback)
+        if: runner.os == 'Linux'
+        run: |
+          # Some npm lockfiles are platform-specific and CI runners may need
+          # to fetch the Rollup native optional package for Linux. Attempt to
+          # install it as a no-save fallback; ignore errors so we don't fail
+          # the job if the package isn't available for the platform.
+          npm install @rollup/rollup-linux-x64-gnu --no-save || true
 
       - name: Seed backend database
         if: ${{ hashFiles('backend/package.json') != '' }}
