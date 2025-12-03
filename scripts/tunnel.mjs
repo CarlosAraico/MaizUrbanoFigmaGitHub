@@ -44,8 +44,17 @@ async function start() {
     timeout: 30000,
   });
 
-  const url = await ngrok.connect({ addr: PORT, proto: "http" });
-  const httpsUrl = url.replace("http://", "https://");
+  let url;
+  if (process.env.CI === "true") {
+    console.log("🧪 Entorno CI detectado: omitiendo ngrok");
+    url = `http://127.0.0.1:${PORT}`;
+  } else {
+    console.log("🔌 Iniciando ngrok...");
+    url = await ngrok.connect({ addr: PORT, proto: "http" });
+    console.log("✅ ngrok activo");
+  }
+
+  const httpsUrl = url.includes("ngrok") ? url.replace("http://", "https://") : url;
   const secret = ensureSecret();
   writePluginEnv(httpsUrl, secret);
 

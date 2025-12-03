@@ -1,0 +1,25 @@
+{
+  "name": "Maiz Urbano Dev",
+  "context": "..",
+  "dockerFile": "Dockerfile",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "postCreateCommand": "npm ci --no-audit --no-fund",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.formatOnSave": true,
+        "eslint.validate": ["javascript", "typescript", "typescriptreact"],
+        "github-actions.validate.enabled": true,
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "github.vscode-github-actions",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  },
+  "forwardPorts": [4000, 5173]
+}
