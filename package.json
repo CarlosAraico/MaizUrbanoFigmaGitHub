@@ -6,6 +6,7 @@
     "setup": "npm i && node -e \"const fs=require('fs');fs.mkdirSync('scripts',{recursive:true});const src='backend/.env.example';const dest='backend/.env';if(!fs.existsSync(dest)&&fs.existsSync(src)){fs.copyFileSync(src,dest);console.log('backend/.env creado');}\"",
     "up": "npm-run-all -p dev:backend dev:frontend plugin:watch tunnel",
     "down": "node scripts/tunnel.mjs --stop",
+    "start:backend": "npm --workspace backend run start",
     "dev:backend": "npm --workspace backend run dev",
     "dev:frontend": "npm --workspace frontend run dev",
     "plugin:watch": "npm --workspace figma-plugin run dev",
