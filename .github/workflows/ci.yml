@@ -30,4 +30,4 @@ jobs:
         if: ${{ hashFiles('backend/package.json') != '' }}
         env:
           DB_PATH: /tmp/mu-backend-seed.db
-        run: npm --workspace backend run seed
+          run: npm --workspace backend run test:seed
