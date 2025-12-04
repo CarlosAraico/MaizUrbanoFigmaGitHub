@@ -8,7 +8,9 @@
     "start": "node src/server.js",
     "dev": "node src/server.js",
     "build": "echo \"backend ready\"",
-    "test": "node -e \"console.log('No automated tests yet')\""
+    "seed": "node scripts/seed.js",
+    "test": "node -e \"console.log('No automated tests yet')\"",
+    "test:seed": "node scripts/test-seed.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
