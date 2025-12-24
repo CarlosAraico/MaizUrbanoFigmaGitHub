@@ -18,17 +18,18 @@ export default function Checkout() {
   const [notes, setNotes] = useState("");
 
   const delivery = useMemo(() => calcDelivery(subtotal, deliveryType, cp), [subtotal, deliveryType, cp]);
-  const total = subtotal + (delivery.ok ? delivery.deliveryFee : delivery.deliveryFee);
+  const fee = deliveryType === "pickup" ? 0 : delivery.deliveryFee;
+  const total = subtotal + fee;
 
   const waLink = useMemo(() => {
     const lines = [
-      "Pedido Maíz Urbano",
+      "Pedido Maiz Urbano",
       `Nombre: ${name || ""}`,
       `Tel: ${phone || ""}`,
-      `Entrega: ${deliveryType === "pickup" ? "Recoger" : "Envío"}`,
+      `Entrega: ${deliveryType === "pickup" ? "Recoger" : "Envio"}`,
     ];
     if (deliveryType === "delivery") {
-      lines.push(`Dirección: ${address || ""}`);
+      lines.push(`Direccion: ${address || ""}`);
       lines.push(`CP: ${cp || ""} · Colonia: ${colonia || ""}`);
     }
     if (notes) lines.push(`Notas: ${notes}`);
@@ -37,10 +38,10 @@ export default function Checkout() {
     for (const it of items) lines.push(`- ${it.qty}x ${it.name} (${mxn(it.price)})`);
     lines.push("");
     lines.push(`Subtotal: ${mxn(subtotal)}`);
-    lines.push(`Envío: ${mxn(deliveryType === "pickup" ? 0 : delivery.deliveryFee)}`);
-    lines.push(`Total: ${mxn(subtotal + (deliveryType === "pickup" ? 0 : delivery.deliveryFee))}`);
+    lines.push(`Envio: ${mxn(fee)}`);
+    lines.push(`Total: ${mxn(total)}`);
     return buildWhatsAppLink({ phone: WHATSAPP_PHONE, text: lines.join("\n") });
-  }, [name, phone, deliveryType, address, cp, colonia, notes, items, subtotal, delivery.deliveryFee]);
+  }, [name, phone, deliveryType, address, cp, colonia, notes, items, subtotal, fee, total]);
 
   const canContinue =
     items.length > 0 &&
@@ -59,10 +60,10 @@ export default function Checkout() {
         colonia,
         notes,
         zoneId: delivery.zone?.id,
-        deliveryFee: delivery.ok ? delivery.deliveryFee : delivery.deliveryFee,
+        deliveryFee: fee,
         minSubtotal: delivery.minSubtotal,
       },
-      totals: { subtotal, deliveryFee: delivery.ok ? delivery.deliveryFee : delivery.deliveryFee, total },
+      totals: { subtotal, deliveryFee: fee, total },
     };
     sessionStorage.setItem("mu_checkout", JSON.stringify(payload));
     window.location.href = "/confirm";
@@ -73,15 +74,15 @@ export default function Checkout() {
       <div className="p-6 rounded-2xl bg-base-50 border border-base-200 shadow-soft">
         <h1 className="text-2xl font-semibold">Checkout</h1>
         <p className="text-base-600 mt-2 text-sm">
-          Envío con zonas por CP. Tienda base: 01010 (Los Alpes, Álvaro Obregón).
+          Envio con zonas por CP. Tienda base: 01010 (Los Alpes, Alvaro Obregon).
         </p>
       </div>
 
       {items.length === 0 ? (
         <div className="p-6 rounded-2xl bg-base-50 border border-base-200">
-          <p className="text-base-600">No hay items. Ve al menú.</p>
+          <p className="text-base-600">No hay items. Ve al menu.</p>
           <a className="inline-block mt-4 px-4 py-2 rounded-xl bg-white text-black" href="/menu">
-            Ir al Menú
+            Ir al Menu
           </a>
         </div>
       ) : (
@@ -97,7 +98,7 @@ export default function Checkout() {
                   ].join(" ")}
                   onClick={() => setDeliveryType("delivery")}
                 >
-                  Envío
+                  Envio
                 </button>
                 <button
                   className={[
@@ -119,22 +120,22 @@ export default function Checkout() {
                   <input className="rounded-xl bg-base-100 border border-base-200 px-3 py-2" value={name} onChange={(e) => setName(e.target.value)} />
                 </label>
                 <label className="grid gap-1">
-                  <span className="text-xs text-base-600">Teléfono</span>
+                  <span className="text-xs text-base-600">Telefono</span>
                   <input className="rounded-xl bg-base-100 border border-base-200 px-3 py-2" value={phone} onChange={(e) => setPhone(e.target.value)} />
                 </label>
 
                 {deliveryType === "delivery" && (
                   <>
                     <label className="grid gap-1 sm:col-span-2">
-                      <span className="text-xs text-base-600">Dirección</span>
+                      <span className="text-xs text-base-600">Direccion</span>
                       <input className="rounded-xl bg-base-100 border border-base-200 px-3 py-2" value={address} onChange={(e) => setAddress(e.target.value)} />
                     </label>
                     <label className="grid gap-1">
-                      <span className="text-xs text-base-600">Código Postal</span>
+                      <span className="text-xs text-base-600">Codigo Postal</span>
                       <input
                         className="rounded-xl bg-base-100 border border-base-200 px-3 py-2"
                         value={cp}
-                        onChange={(e) => setCp(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                        onChange={(e) => setCp(e.target.value.replace(/\\D/g, "").slice(0, 5))}
                       />
                     </label>
                     <label className="grid gap-1">
@@ -157,7 +158,7 @@ export default function Checkout() {
                     <span className="font-mono">{delivery.zone.name}</span>
                   </div>
                   <div className="flex items-center justify-between mt-2">
-                    <span className="text-base-600">Envío</span>
+                    <span className="text-base-600">Envio</span>
                     <span className="font-mono">{mxn(delivery.deliveryFee)}</span>
                   </div>
                   {!delivery.ok && <div className="mt-2 text-amber-300">{delivery.message}</div>}
@@ -173,17 +174,17 @@ export default function Checkout() {
               onClick={goConfirm}
               disabled={!canContinue}
             >
-              Continuar a Confirmación
+              Continuar a Confirmacion
             </button>
           </div>
 
           <aside className="p-6 rounded-2xl bg-base-50 border border-base-200 h-fit space-y-3">
             <div className="text-sm text-base-600">Subtotal</div>
             <div className="text-xl font-semibold">{mxn(subtotal)}</div>
-            <div className="text-sm text-base-600">Envío</div>
-            <div className="text-xl font-semibold">{mxn(deliveryType === "pickup" ? 0 : delivery.deliveryFee)}</div>
+            <div className="text-sm text-base-600">Envio</div>
+            <div className="text-xl font-semibold">{mxn(fee)}</div>
             <div className="text-sm text-base-600">Total</div>
-            <div className="text-2xl font-semibold">{mxn(subtotal + (deliveryType === "pickup" ? 0 : delivery.deliveryFee))}</div>
+            <div className="text-2xl font-semibold">{mxn(total)}</div>
 
             <a
               className="block text-center w-full px-4 py-2 rounded-xl bg-white text-black font-medium"
