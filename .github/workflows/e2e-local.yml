@@ -23,7 +23,7 @@ jobs:
           node-version: 20
 
       - name: Install deps (light)
-        run: npm ci --ignore-scripts --no-audit --no-fund || true
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Start backend
         run: |

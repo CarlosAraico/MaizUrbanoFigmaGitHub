@@ -18,8 +18,8 @@ jobs:
           node-version: 20
       - name: Install deps (light)
         run: |
-          npm ci --ignore-scripts --no-audit --no-fund || true
-          npm --workspace figma-plugin ci --ignore-scripts --no-audit --no-fund || true
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm --workspace figma-plugin ci --ignore-scripts --no-audit --no-fund
 
       - name: Start backend
         run: |
