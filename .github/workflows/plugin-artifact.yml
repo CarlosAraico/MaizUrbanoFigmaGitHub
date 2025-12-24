@@ -27,7 +27,7 @@ jobs:
           # Fallback cuando el secret no está disponible (PRs/forks)
           export WEBHOOK_SECRET="${WEBHOOK_SECRET:-devsecret}"
 
-          node backend/src/server.js &
+          nohup node backend/src/server.js > backend.log 2>&1 &
           for i in {1..60}; do
             if curl -fsS http://127.0.0.1:4000/api/health >/dev/null; then
               echo "Backend OK"
@@ -45,11 +45,7 @@ jobs:
         run: |
           export PLUGIN_BASE="http://127.0.0.1:4000"
           export WEBHOOK_SECRET="${WEBHOOK_SECRET:-devsecret}"
-          if [ -z "${WEBHOOK_SECRET:-}" ]; then
-            npm run plugin:start -- --no-up --no-e2e --zip
-          else
-            npm run plugin:start -- --no-up --zip
-          fi
+          npm run plugin:start -- --no-up --no-e2e --zip
 
       - name: Upload Package (ZIP + SHA256 + Manifest) y Reporte E2E (si existe)
         uses: actions/upload-artifact@v4
