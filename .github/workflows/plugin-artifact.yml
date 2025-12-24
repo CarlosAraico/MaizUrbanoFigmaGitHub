@@ -43,6 +43,7 @@ jobs:
         env:
           CI: true
         run: |
+          export WEBHOOK_SECRET="${WEBHOOK_SECRET:-devsecret}"
           if [ -z "${WEBHOOK_SECRET:-}" ]; then
             npm run plugin:start -- --no-up --no-e2e --zip
           else
