@@ -1,4 +1,4 @@
-﻿/**
+/**
  * E2E en Node 20+ sin deps.
  * Endurecido: CORS preflight, content-type, header x-webhook-secret (lowercase),
  * stock=0, id inexistente (404 en --strict).

@@ -1,4 +1,4 @@
-﻿export const inventory = new Map([
+export const inventory = new Map([
   ["corn-blue", 120],
   ["corn-yellow-kg", 140],
   ["masa-premium", 80],

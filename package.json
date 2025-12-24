@@ -27,8 +27,10 @@
   },
   "devDependencies": {
     "dotenv": "^16.4.5",
-    "ngrok": "^5.0.0-beta.2",
     "npm-run-all": "^4.1.5",
     "wait-on": "^7.2.0"
+  },
+  "optionalDependencies": {
+    "ngrok": "^5.0.0-beta.2"
   }
 }
