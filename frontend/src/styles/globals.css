@@ -1,0 +1,86 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap");
+@import "./variables.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  line-height: 1.6;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Space Grotesk", "Inter", system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+@layer components {
+  .page-shell {
+    @apply max-w-6xl md:max-w-7xl mx-auto px-6 md:px-8;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-150;
+    padding: 0.85rem 1.4rem;
+  }
+
+  .btn-primary {
+    background: linear-gradient(120deg, #b4ff4a, #5ad2b4);
+    color: #04100d;
+    box-shadow: 0 15px 40px rgba(90, 210, 180, 0.25);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 60px rgba(180, 255, 74, 0.22);
+  }
+
+  .btn-ghost {
+    border: 1px solid var(--color-border);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--color-text-primary);
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--color-primary-strong);
+    color: #dfffc0;
+  }
+
+  .card {
+    border: 1px solid var(--color-border);
+    background: linear-gradient(
+        140deg,
+        rgba(255, 255, 255, 0.02),
+        rgba(255, 255, 255, 0)
+      ),
+      #0c1624;
+    box-shadow: var(--shadow-soft);
+  }
+}

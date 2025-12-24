@@ -23,7 +23,7 @@ const SECRET = (process.env.WEBHOOK_SECRET ?? env.WEBHOOK_SECRET ?? env.PLUGIN_S
 const MAT_ID = (process.env.MATERIAL_ID ?? 'corn-blue').trim();
 const NEW_STOCK = Number(process.env.NEW_STOCK ?? 123);
 
-assert(BASE && /^https?:\/\//.test(BASE), 'PLUGIN_BASE requerido, ej: https://<ngrok>.ngrok-free.dev o http://127.0.0.1:4000');
+assert(BASE && /^https?:\/\//.test(BASE), 'PLUGIN_BASE requerido, ej: https://<ngrok>.ngrok-free.dev o http://127.0.0.1:3000');
 assert(SECRET, 'WEBHOOK_SECRET requerido (o PLUGIN_SECRET en .env.local)');
 assert(Number.isFinite(NEW_STOCK), 'NEW_STOCK debe ser número');
 
@@ -34,7 +34,7 @@ log(`BASE=${BASE}`);
 log(`MATERIAL_ID=${MAT_ID} NEW_STOCK=${NEW_STOCK} EVENT_ID=${EVENT_ID}`);
 
 await step('Health LOCAL', async () => {
-  const r = await get('http://127.0.0.1:4000/api/health');
+  const r = await get('http://127.0.0.1:3000/api/health');
   expectOk(r);
 });
 await step('Health REMOTO', async () => {

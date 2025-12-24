@@ -35,7 +35,7 @@ Write-Host "🔎 NEW_STOCK=$NewStock"
 Write-Host "🔎 EVENT_ID=$EventId"
 
 # Health local
-try { iwr -UseBasicParsing "http://127.0.0.1:4000/api/health" -ErrorAction Stop | Out-Null } catch { Fail "Health LOCAL falló" }
+try { iwr -UseBasicParsing "http://127.0.0.1:3000/api/health" -ErrorAction Stop | Out-Null } catch { Fail "Health LOCAL falló" }
 Ok "Health LOCAL ok"
 
 # Health remoto

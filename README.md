@@ -1,12 +1,12 @@
 # Maiz Urbano - Dev Stack
 
-Monorepo con backend Express + SQLite, frontend Vite+React+Tailwind y plugin de Figma. Usa npm workspaces.
+Monorepo con backend Express + Prisma/Postgres, frontend Vite+React+Tailwind y plugin de Figma. Usa npm workspaces.
 
 ## Quickstart
 ```bash
 npm run setup          # instala deps de workspace y prepara backend/.env si no existe
 npm run up             # dev backend + frontend + plugin watch + tunel ngrok
-# Backend: http://127.0.0.1:4000/api/health
+# Backend: http://127.0.0.1:3000/api/health
 # Frontend: http://127.0.0.1:5173
 # Ngrok: URL https impresa en consola, y escribe figma-plugin/.env.local
 ```

@@ -39,7 +39,7 @@ echo "🔎 NEW_STOCK=${NEW_STOCK}"
 echo "🔎 EVENT_ID=${EVENT_ID}"
 
 # --- Health local ---
-curl -fsS "http://127.0.0.1:4000/api/health" >/dev/null || fail "Health LOCAL falló"
+curl -fsS "http://127.0.0.1:3000/api/health" >/dev/null || fail "Health LOCAL falló"
 ok "Health LOCAL ok"
 
 # --- Health remoto (ngrok) ---
