@@ -25,14 +25,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Deploy skipped note
+        if: ${{ !(secrets.PROD_SSH_HOST != '' && secrets.PROD_SSH_USER != '' && secrets.PROD_SSH_KEY != '' && secrets.PROD_REPO_PATH != '') }}
+        run: echo "Deploy skipped: missing SSH secrets" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Resolve image name
         id: img
         run: |
           REPO_LC="$(echo '${{ github.event.repository.name }}' | tr '[:upper:]' '[:lower:]')"
           echo "name=ghcr.io/${{ github.repository_owner }}/${REPO_LC}-backend:latest" >> $GITHUB_OUTPUT
 
-      - name: SSH – deploy compose
+      - name: SSH deploy compose
         uses: appleboy/ssh-action@v1.0.3
+        if: ${{ secrets.PROD_SSH_HOST != '' && secrets.PROD_SSH_USER != '' && secrets.PROD_SSH_KEY != '' && secrets.PROD_REPO_PATH != '' }}
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
           username: ${{ secrets.PROD_SSH_USER }}

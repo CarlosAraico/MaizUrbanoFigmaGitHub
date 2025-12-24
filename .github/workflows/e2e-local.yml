@@ -23,18 +23,32 @@ jobs:
           node-version: 20
 
       - name: Install deps (light)
-        run: npm ci --ignore-scripts --no-audit --no-fund || true
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm --workspace backend ci --ignore-scripts --no-audit --no-fund
 
       - name: Start backend
         run: |
-          node backend/src/server.js &
-          for i in {1..30}; do
-            curl -fsS http://127.0.0.1:4000/api/health && break
+          set -e
+          export WEBHOOK_SECRET="${WEBHOOK_SECRET:-devsecret}"
+
+          nohup node backend/src/server.js > backend.log 2>&1 &
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:4000/api/health >/dev/null; then
+              echo "Backend OK"
+              exit 0
+            fi
             sleep 1
           done
 
+          echo "Backend no levantó"
+          exit 1
+
       - name: Run E2E (Node strict)
-        run: npm run test:e2e:ci
+        run: |
+          export PLUGIN_BASE="http://127.0.0.1:4000"
+          export WEBHOOK_SECRET="${WEBHOOK_SECRET:-devsecret}"
+          npm run test:e2e:ci
 
       - name: Upload E2E JSON report
         uses: actions/upload-artifact@v4

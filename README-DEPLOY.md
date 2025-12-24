@@ -1,33 +1,34 @@
 # Backend MU v4 - Deploy
 
-Guia rapida para levantar el backend de inventario (webhook con SQLite) localmente y en un VPS usando GHCR.
+Guia rapida para levantar el backend de inventario (Express + Prisma + Postgres) localmente y en un VPS usando GHCR.
 
 ## Variables de entorno
 
 Copia `backend/.env.example` a `backend/.env` y ajusta:
 
-- `PORT`: puerto expuesto (default 4000).
-- `DB_PATH`: ruta del archivo SQLite dentro del contenedor/host (`/app/data/inventory.db` recomendado en Docker).
-- `WEBHOOK_SECRET`: secreto compartido para validar el webhook (`X-Webhook-Secret`).
+- `PORT`: puerto expuesto (default 3000).
+- `DATABASE_URL`: cadena Postgres (coincide con docker-compose).
+- `JWT_SECRET`: secreto JWT.
+- `WEBHOOK_SECRET` / `PLUGIN_SECRET`: secreto compartido para `X-Webhook-Secret`.
 
-## Local (Node + SQLite)
+## Local (Node + Postgres)
 
 ```bash
 cp backend/.env.example backend/.env
 npm ci --prefix backend
-node backend/server.js
+node backend/src/index.js
 # o
 npm run dev --prefix backend
 ```
 
-## Local con Docker Compose
+## Local con Docker Compose (dev)
 
 ```bash
 cp backend/.env.example backend/.env
-docker compose up --build backend
+docker compose up --build
 ```
 
-La base se guarda en `./backend/data/`. El endpoint queda en `http://localhost:4000`.
+El endpoint queda en `http://localhost:3000`.
 
 ## Imagen en GHCR
 
@@ -51,12 +52,12 @@ docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-Asegurate de tener `backend/.env` en el servidor y un volumen persistente para `backend/data`.
+Asegurate de tener `backend/.env` en el servidor y un volumen persistente para los datos de Postgres (ver `docker-compose.prod.yml` volumen `postgres_data`).
 
 ## Ngrok / pruebas de webhook
 
 ```bash
-ngrok http 4000
+ngrok http 3000
 
 curl -X POST https://<ngrok>.ngrok.io/webhook/inventory \
   -H "Content-Type: application/json" \

@@ -13,11 +13,14 @@ venv/
 !backend/.env.example
 backend/.env
 backend/data/
+!backend/data/menu.json
+backend/uploads/
 frontend/node_modules/
 figma-plugin/node_modules/
 figma-plugin/dist/
 figma-plugin/mu-figma-plugin.zip
 artifacts/
+qa-reports/
 .DS_Store
 Thumbs.db
 .vscode/

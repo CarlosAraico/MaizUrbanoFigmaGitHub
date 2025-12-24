@@ -7,7 +7,7 @@ import ngrok from "ngrok";
 const ROOT = process.cwd();
 const BE_ENV = path.join(ROOT, "backend/.env");
 const PLUGIN_ENV = path.join(ROOT, "figma-plugin/.env.local");
-const PORT = 4000;
+const PORT = 3000;
 
 function ensureSecret() {
   let secret = "CHANGE_ME";

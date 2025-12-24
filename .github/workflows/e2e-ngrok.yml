@@ -7,6 +7,7 @@ on:
 
 jobs:
   e2e-ngrok:
+    if: ${{ secrets.NGROK_AUTHTOKEN != '' }}
     runs-on: ubuntu-latest
     env:
       WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
@@ -26,11 +27,21 @@ jobs:
 
       - name: Start backend
         run: |
+          set -e
+          # Fallback cuando el secret no está disponible (PRs/forks)
+          export WEBHOOK_SECRET="${WEBHOOK_SECRET:-devsecret}"
+
           node backend/src/server.js &
-          for i in {1..30}; do
-            curl -fsS http://127.0.0.1:4000/api/health && break
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:4000/api/health >/dev/null; then
+              echo "Backend OK"
+              exit 0
+            fi
             sleep 1
           done
+
+          echo "Backend no levantó"
+          exit 1
 
       - name: Install ngrok
         run: npm i ngrok --no-save
