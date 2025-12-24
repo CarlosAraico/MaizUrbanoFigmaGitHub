@@ -53,17 +53,18 @@ async function main() {
     console.log("⚠️  Saltando `npm run up` (--no-up)");
   }
 
-  await waitForUrl("http://127.0.0.1:3000/api/health", 60_000, "Backend local");
-  if (!NO_UP) {
-    await waitForFile(paths.pluginEnv, 60_000, "figma-plugin/.env.local");
-  }
-
-  // entorno
   const env = await loadEnv();
   const BASE = pick(process.env.PLUGIN_BASE, env.PLUGIN_BASE);
   const SECRET = pick(process.env.WEBHOOK_SECRET, env.WEBHOOK_SECRET, env.PLUGIN_SECRET);
   const MAT_ID = pick(process.env.MATERIAL_ID, "corn-blue");
   const NEW_STOCK = Number(pick(process.env.NEW_STOCK, 123));
+
+  const isLocal = BASE && (BASE.includes("127.0.0.1") || BASE.includes("localhost"));
+  const localHealth = isLocal ? trimSlash(BASE) + "/api/health" : "http://127.0.0.1:4000/api/health";
+  await waitForUrl(localHealth, 60_000, "Backend local");
+  if (!NO_UP) {
+    await waitForFile(paths.pluginEnv, 60_000, "figma-plugin/.env.local");
+  }
 
   assert(BASE && /^https?:\/\//.test(BASE), "PLUGIN_BASE requerido (https://<ngrok>.ngrok-free.dev o http://127.0.0.1:3000)");
   assert(SECRET, "WEBHOOK_SECRET/PLUGIN_SECRET requerido");
