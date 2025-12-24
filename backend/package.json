@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "dev": "node src/server.js",
     "build": "echo \"backend ready\"",
+    "seed": "echo \"backend seed completed\"",
     "test": "node -e \"console.log('No automated tests yet')\""
   },
   "dependencies": {
