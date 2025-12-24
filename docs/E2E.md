@@ -1,7 +1,7 @@
 # E2E - Webhook e Inventario
 
 ## Requisitos
-- `npm run setup && npm run up` (levanta backend:4000, frontend:5173 y ngrok; crea `figma-plugin/.env.local`).
+- `npm run setup && npm run up` (levanta backend:3000, frontend:5173 y ngrok; crea `figma-plugin/.env.local`).
 - Asegura que `WEBHOOK_SECRET` coincide con `PLUGIN_SECRET`.
 
 ## Ejecutar pruebas
@@ -27,10 +27,10 @@ npm run test:e2e:win
 El verificador Node escribe `artifacts/e2e-report.json` (ruta configurable con `REPORT_PATH` o `--report=...`). Se adjunta como artifact en los workflows.
 
 ## Workflows
-- **E2E local (sin tunel)**: `e2e-local.yml` levanta backend en CI y prueba con `PLUGIN_BASE=http://127.0.0.1:4000`.
+- **E2E local (sin tunel)**: `e2e-local.yml` levanta backend en CI y prueba con `PLUGIN_BASE=http://127.0.0.1:3000`.
 - **E2E remoto (tunel manual)**: `e2e-remote.yml` usa tu URL ngrok ingresada en `workflow_dispatch`.
-- **E2E ngrok (autogestionado)**: `e2e-ngrok.yml` requiere `NGROK_AUTHTOKEN` en Secrets; expone puerto 4000, define `PLUGIN_BASE` y corre `plugin:start` con build, E2E y ZIP.
-- **Plugin package local**: `plugin-artifact.yml` usa `PLUGIN_BASE=http://127.0.0.1:4000` para build + ZIP + SHA256 + manifest (E2E opcional si hay `WEBHOOK_SECRET`).
+- **E2E ngrok (autogestionado)**: `e2e-ngrok.yml` requiere `NGROK_AUTHTOKEN` en Secrets; expone puerto 3000, define `PLUGIN_BASE` y corre `plugin:start` con build, E2E y ZIP.
+- **Plugin package local**: `plugin-artifact.yml` usa `PLUGIN_BASE=http://127.0.0.1:3000` para build + ZIP + SHA256 + manifest (E2E opcional si hay `WEBHOOK_SECRET`).
 
 ### Secrets requeridos
 - `WEBHOOK_SECRET` (igual a `PLUGIN_SECRET` del plugin).

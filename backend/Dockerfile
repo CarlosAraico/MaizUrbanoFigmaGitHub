@@ -2,14 +2,13 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev
+COPY package*.json ./
+RUN npm install
 
 COPY . .
 
-ENV NODE_ENV=production
-ENV PORT=4000
+RUN npx prisma generate
 
-EXPOSE 4000
+EXPOSE 3000
 
-CMD ["npm", "start"]
+CMD ["npm", "run", "start"]

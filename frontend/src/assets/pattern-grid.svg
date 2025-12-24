@@ -1,0 +1,14 @@
+<svg width="360" height="320" viewBox="0 0 360 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="360" height="320" fill="#0b1420"/>
+  <g stroke="#1c2a3f" stroke-width="1">
+    <path d="M0 32h360M0 64h360M0 96h360M0 128h360M0 160h360M0 192h360M0 224h360M0 256h360M0 288h360"/>
+    <path d="M32 0v320M64 0v320M96 0v320M128 0v320M160 0v320M192 0v320M224 0v320M256 0v320M288 0v320M320 0v320"/>
+  </g>
+  <rect x="0.5" y="0.5" width="359" height="319" rx="24" stroke="url(#grid)" stroke-opacity="0.45"/>
+  <defs>
+    <linearGradient id="grid" x1="0" y1="0" x2="360" y2="320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#b4ff4a"/>
+      <stop offset="1" stop-color="#5ad2b4"/>
+    </linearGradient>
+  </defs>
+</svg>

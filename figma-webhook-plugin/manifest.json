@@ -1,0 +1,15 @@
+{
+  "name": "Maiz Urbano Webhook",
+  "id": "maiz-urbano-webhook",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "capabilities": ["inspect"],
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": [
+      "http://localhost:3000"
+    ]
+  }
+}

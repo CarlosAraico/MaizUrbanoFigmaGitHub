@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  role         UserRole @default(USER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum UserRole {
+  ADMIN
+  DIRECTOR
+  USER
+}
+
+model Config {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value Json
+}
+
+model Supplier {
+  id           Int      @id @default(autoincrement())
+  name         String
+  contactName  String?
+  email        String?
+  phone        String?
+  paymentTerms String?
+  status       String   @default("active")
+  items        Item[]
+}
+
+model Item {
+  id                Int               @id @default(autoincrement())
+  sku               String            @unique
+  name              String
+  category          String?
+  unit              String
+  defaultCost       Decimal?
+  defaultSupplierId Int?
+  defaultSupplier   Supplier?         @relation(fields: [defaultSupplierId], references: [id])
+  movements         InventoryMovement[]
+}
+
+model InventoryMovement {
+  id           Int          @id @default(autoincrement())
+  item         Item         @relation(fields: [itemId], references: [id])
+  itemId       Int
+  movementType MovementType
+  quantity     Decimal
+  unitCost     Decimal?
+  source       String?
+  referenceId  String?
+  movementDate DateTime     @default(now())
+}
+
+enum MovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+model MenuItem {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  imageUrl    String?
+  price       Decimal
+  cost        Decimal?
+  category    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
