@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "dev": "node src/server.js",
     "build": "echo \"backend ready\"",
+    "seed": "echo \"Backend seed: in-memory store initialized\"",
     "test": "node -e \"console.log('No automated tests yet')\""
   },
   "dependencies": {
